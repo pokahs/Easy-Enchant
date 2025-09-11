@@ -5,11 +5,11 @@
 
 <br>
 
-This is a client-only utility mod that allows you to easily and efficiently combine your enchanted books with gear at anvils!
+This is a client side utility mod that allows you to easily and efficiently combine your enchanted books with gear at anvils!
 
 
 
-🛠️ **Important!! Easy Enchant is new and not rly that tested. You might experience issues/crashes. If so, plz make a ticket kthx byee** 🛠️
+🛠️ **Important!! Easy Enchant is in beta and rlyy not that tested. You might experience issues/crashes. If so, plz make an issue ticket kthx byee** 🛠️
 
 ## Usage
 
@@ -28,7 +28,7 @@ After selecting your items, you can choose to either click:
 Easy Enchant will ***NOT*** let you do combination steps/processes if you do not have the levels to do so.
 You can always hover over the different enchanting buttons to see how many levels or XP they would take.
 
-Finally, you can toggle the current **optimizing mode**. The two options are **Levels** and **XP**. This decies what Easy Enchant optimizes for to be lowest.
+Finally, you can toggle the current **optimizing mode**. The two options are **Levels** and **XP**. This decides what Easy Enchant optimizes for to be lowest.
 
 ### Reccomendations
 - If you already have enough levels and want to just use the **Enchant fully** button, then you should optimize for **Levels**.
