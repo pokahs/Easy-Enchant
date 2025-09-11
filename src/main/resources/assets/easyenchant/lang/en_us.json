@@ -1,0 +1,59 @@
+{
+    
+  "key.easyenchant.select_item" : "Select item",
+  "category.easyenchant" : "Easy Enchant",
+
+  "easyenchant.status.enchanting_complete": "Enchanting complete!",
+  "easyenchant.status.step_complete": "Enchanting step complete!",
+  "easyenchant.status.select_by_pressing": "Press %1$s to select items!",
+  "easyenchant.status.running_optimizer" : "Running enchanting optimizer…",
+  "easyenchant.status.item_obstruction" : "Item obstruction! Make sure anvil and original item slots are empty.",
+  "easyenchant.status.timeout" : "Enchantment timed out! Try again.",
+  
+  "easyenchant.button.levels" : "Levels",
+  "easyenchant.button.xp" : "XP",
+  "easyenchant.button.config" : "Config",
+  "easyenchant.button.enchant_fully": "Enchant fully",
+  "easyenchant.button.enchant_step": "Enchant step",
+  "easyenchant.button.select_items": "Select items to enchant",
+  "easyenchant.button.select_gear": "Select gear to enchant",
+  "easyenchant.button.select_books": "Select books to enchant",
+  "easyenchant.button.too_expensive": "Too expensive!",
+  "easyenchant.button.enchant_for_levels_and_xp": "Enchant for %1$s levels (%2$s XP)",
+  "easyenchant.button.enchant_for_levels_and_xp_range": "Enchant for %1$s levels (%2$s-%3$s XP)",
+  
+  "easyenchant.fail.gear_already_set": "Gear is already set",
+  "easyenchant.fail.item_not_valid" : "Item is not a valid gear or book",
+  "easyenchant.fail.cannot_combine_enchants" : "%1$s and %2$s cannot both be on %3$s",
+  "easyenchant.fail.no_valid_enchants_for_gear" : "Book %1$s has no valid enchants for %2$s",
+  "easyenchant.fail.no_useful_enchants": "Book %1$s has no applicable / unique enchants",
+  "easyenchant.fail.cannot_handle_more_than_two_of_same_enchant" : "Easy Enchant does not support combining more than two of an enchant type (%1$s) to get a higher leveled enchant",
+
+  
+  "text.autoconfig.easyenchant.title": "Easy Enchant Config",
+
+  "text.autoconfig.easyenchant.option.mode": "Optimizing mode",
+  "text.autoconfig.easyenchant.option.mode.@Tooltip": "Determines what the mod optimizes to be the lowest",
+
+  "text.autoconfig.easyenchant.option.selectedItemFillColor": "Selected item fill color",
+  "text.autoconfig.easyenchant.option.selectedItemFillColor.@Tooltip": "The color shown / overlayed on selected items",
+  
+  "text.autoconfig.easyenchant.option.selectedItemBorderColor": "Selected item border color",
+  "text.autoconfig.easyenchant.option.selectedItemBorderColor.@Tooltip": "The border color shown around the edges of selected items",
+
+  "text.autoconfig.easyenchant.option.packetTickDelay": "Packet tick delay",
+  "text.autoconfig.easyenchant.option.packetTickDelay.@Tooltip[0]": "The number of game ticks delayed until the next packet is sent.",
+  "text.autoconfig.easyenchant.option.packetTickDelay.@Tooltip[1]": "0 means a packet is sent every tick,",
+  "text.autoconfig.easyenchant.option.packetTickDelay.@Tooltip[2]": "1 means the mod waits 1 tick before sending the next packet,",
+  "text.autoconfig.easyenchant.option.packetTickDelay.@Tooltip[3]": "etc...",
+
+  "text.autoconfig.easyenchant.option.allowRenaming": "Allow Renaming",
+  "text.autoconfig.easyenchant.option.allowRenaming.@Tooltip[0]": "Allows you to rename your item by not confirming the",
+  "text.autoconfig.easyenchant.option.allowRenaming.@Tooltip[1]": "last combination step automatically",
+
+  "text.autoconfig.easyenchant.option.instantEnchant": "Instant Enchant",
+  "text.autoconfig.easyenchant.option.instantEnchant.@Tooltip[0]": "Attempts to send ALL packets within one game tick!",
+  "text.autoconfig.easyenchant.option.instantEnchant.@Tooltip[1]": "Not rly reccomended but can be fun to try :P",
+  "text.autoconfig.easyenchant.option.instantEnchant.@Tooltip[2]": "(Note if this is turned on then packet tick delay is ignored)"
+
+}

@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "easyenchant",
+	"version": "${version}",
+	"name": "Easy Enchant",
+	"description": "Easily and efficiently combine your gear with books at anvils!",
+	"authors": [
+		"pokahs"
+	],
+	"contact": {
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/easyenchant/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.pokahs.easyenchant.EasyEnchant"
+		],
+		"client": [
+			"io.github.pokahs.easyenchant.EasyEnchantClient"
+		],
+		"modmenu": [
+			"io.github.pokahs.easyenchant.ModMenuIntegration"
+		]
+	},
+	"mixins": [
+		{
+			"config": "easyenchant.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.17.2",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": ">=0.119.4+1.21.4",
+		"cloth-config": ">=17.0.144",
+		"modmenu": ">=13.0.3"
+	}
+}
