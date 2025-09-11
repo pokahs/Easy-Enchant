@@ -1,8 +1,12 @@
 package io.github.pokahs.easyenchant;
 
+import java.util.List;
+
 import io.github.pokahs.easyenchant.SelectedItemManager.AddResult;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.Text;
 
 public class StatusManager {
 
@@ -26,16 +30,12 @@ public class StatusManager {
         }
     }
 
-    private String statusMsg = "";
-
     private TextRenderer textRenderer;
 
     private int x;
     private int y;
-    private int width;
-
-    private int curTextX;
-    private int curTextY;
+    private int guiWidth;
+    private int screenWidth;
 
     private int defaultFadeDuration = 1500;
     private int defaultOpaqueDuration = 3000;
@@ -46,26 +46,29 @@ public class StatusManager {
 
     private TextColor statusColor = TextColor.DEFAULT;
 
+    private List<OrderedText> statusLines = java.util.Collections.emptyList();
 
-    public StatusManager(TextRenderer textRenderer, int x, int y, int width) {
+
+
+    public StatusManager(TextRenderer textRenderer, int x, int y, int guiWidth, int screenWidth) {
+        this.textRenderer = textRenderer;
         this.x = x;
         this.y = y;
-        this.width = width;
-        this.textRenderer = textRenderer;
+        this.guiWidth = guiWidth;
+        this.screenWidth = screenWidth;
     }
 
     public void updateStatusTo(String msg, TextColor color, int opaqueDuration) {
-        this.statusMsg = msg;
         this.statusColor = color;
         this.opaqueDuration = opaqueDuration;
         this.startFadeTime = net.minecraft.util.Util.getMeasuringTimeMs() + this.opaqueDuration;
         this.endStatusTime = this.startFadeTime + defaultFadeDuration;
 
-        int textWidth = this.textRenderer.getWidth(statusMsg);
-        int centerX = this.x + this.width / 2;
-
-        curTextX = centerX - textWidth / 2;
-        curTextY = this.y;
+        this.statusLines = this.textRenderer.wrapLines(
+            Text.literal(msg),
+            this.screenWidth
+        );
+        
     }
 
     public void updateStatusTo(String msg, TextColor color) {
@@ -80,26 +83,35 @@ public class StatusManager {
         updateStatusTo(result.failReason(), result.successful() ? TextColor.SUCCESS : TextColor.ERROR);
     }
 
+    private void render(DrawContext ctx, int color) {
+        for (int i = 0; i < statusLines.size(); i++) {
+            OrderedText line = statusLines.get(i);
+            int lineWidth = textRenderer.getWidth(line);
+            int lineX = this.x - lineWidth / 2;
 
-    public void render(DrawContext ctx) {
+            ctx.drawText(textRenderer, line, lineX, this.y + i * textRenderer.fontHeight, color, false);
+        }
+    }
+
+
+    public void tryRender(DrawContext ctx) {
         long now = net.minecraft.util.Util.getMeasuringTimeMs();
-        if (!statusMsg.isEmpty() && endStatusTime > now) {
+        if (!statusLines.isEmpty() && endStatusTime > now) {
 
-            if (startFadeTime > now) {
-                ctx.drawText(this.textRenderer, statusMsg, curTextX, curTextY, this.statusColor.getRGB(), false);
-            } else {
+            if (startFadeTime > now) render(ctx, statusColor.getRGB());
+            else {
                 float remainingMs = endStatusTime - now;
-                float fade = remainingMs / this.defaultFadeDuration;
+                float fade = remainingMs / defaultFadeDuration;
                 int alpha = Math.max(1, (int)(fade * 255.0f));
 
                 if (alpha > 8) { // put a gun to my head i could not explain why vals below this randomly cause opaque rendering
 
-                    int argb = (alpha << 24) | this.statusColor.getRGB();
+                    int argb = (alpha << 24) | statusColor.getRGB();
 
-                    ctx.drawText(this.textRenderer, statusMsg, curTextX, curTextY, argb, false);
+                    render(ctx, argb);
 
                 } else {
-                    statusMsg = ""; // Clear the message to avoid dummy checks for last frames
+                    statusLines = java.util.Collections.emptyList();
                 }
             }
         }
