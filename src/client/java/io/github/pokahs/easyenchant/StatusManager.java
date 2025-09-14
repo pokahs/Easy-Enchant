@@ -34,7 +34,6 @@ public class StatusManager {
 
     private int x;
     private int y;
-    private int guiWidth;
     private int screenWidth;
 
     private int defaultFadeDuration = 1500;
@@ -50,11 +49,10 @@ public class StatusManager {
 
 
 
-    public StatusManager(TextRenderer textRenderer, int x, int y, int guiWidth, int screenWidth) {
+    public StatusManager(TextRenderer textRenderer, int x, int y, int screenWidth) {
         this.textRenderer = textRenderer;
         this.x = x;
         this.y = y;
-        this.guiWidth = guiWidth;
         this.screenWidth = screenWidth;
     }
 

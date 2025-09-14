@@ -115,7 +115,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
             .dimensions(x + BUTTON_WIDTH, y + backgroundHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
 
-        statusManager = new StatusManager(textRenderer, x + backgroundWidth / 2, y + backgroundHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING, backgroundWidth, MinecraftClient.getInstance().getWindow().getScaledWidth());
+        statusManager = new StatusManager(textRenderer, x + backgroundWidth / 2, y + backgroundHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING, MinecraftClient.getInstance().getWindow().getScaledWidth());
         
         handleItemSelectionChange(); // Handles if differences in saved manager vs current inventory
 
