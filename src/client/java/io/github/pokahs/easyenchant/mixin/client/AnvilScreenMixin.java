@@ -57,24 +57,26 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
     private final int BUTTON_HEIGHT = 20;
     private final int STATUS_PADDING = 5;
 
-
     private CyclingButtonWidget<Mode> modeButton;
 
     private StatusManager statusManager;
     
     private SelectedItemManager selectedItemManager = SelectedItemManager.getInstance();
     
-    private Plan plan = null; // null when no valid plan
+    private Plan plan; // null when no valid plan
 
-    private AutoEnchanter enchanter = null; // null when idle
+    private AutoEnchanter enchanter; // null when idle
 
+    private ItemStack outputSave = ItemStack.EMPTY;
+
+    
     @Inject(method = "setup", at = @At("TAIL"))
     protected void setup(CallbackInfo ci) {
         
         cfg = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
 
         enchantFullyButton = addDrawableChild(ButtonWidget.builder(Text.translatable("easyenchant.button.enchant_fully"), b -> {
-            enchanter = new AutoEnchanter(plan.instructions, cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant);
+            enchanter = new AutoEnchanter(handler, plan.instructions, cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant);
             plan = null;
             handleEnchanterInitiation();
         })
@@ -84,7 +86,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
         enchantStepButton = addDrawableChild(ButtonWidget.builder(Text.translatable("easyenchant.button.enchant_step"), b -> {
             boolean noMoreInstructions = plan.instructions.size() == 1;
-            enchanter = new AutoEnchanter(plan.instructions.getFirst(), cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant, noMoreInstructions);
+            enchanter = new AutoEnchanter(handler, plan.instructions.getFirst(), cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant, noMoreInstructions);
             plan = noMoreInstructions ? null : new Plan(plan.instructions.subList(1, plan.instructions.size()));
             handleEnchanterInitiation();
         })
@@ -133,7 +135,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
     }
 
 
-    public void toggleBagItem(double mouseX, double mouseY) {
+    public void toggleSelectedItem(double mouseX, double mouseY) {
 
         // Do not toggle anything while automation is running
         if (enchanting()) return;
@@ -220,6 +222,33 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         }
     }
 
+
+    @Override
+    public void removed() {
+        super.removed(); // Also need to check if its last instruction, otherwise reselects completely done product
+        if (enchanting() && !enchanter.runningLastStep && outputSave == handler.getCursorStack()) {
+            // MinecraftClient.getInstance().player.sendMessage(Text.of("Anvil frickin broke!"), false);
+            
+            // Hotbar: [30, size)
+            for (int i = 30; i < handler.slots.size(); i++) {
+                Slot slot = handler.slots.get(i);
+                if (slot.getStack().isEmpty()) {
+                    selectedItemManager.tryAddItem(slot.id, outputSave);
+                    return; // done
+                }
+            }
+
+            // Inventory: [3, 30), ignore slot 0, 1, 2 as anvil slots
+            for (int i = 3; i < 30; i++) {
+                Slot slot = handler.slots.get(i);
+                if (slot.getStack().isEmpty()) {
+                    selectedItemManager.tryAddItem(slot.id, outputSave);
+                    return;
+                }
+            }
+        }
+    }
+
     
     
 	@Inject(method = "handledScreenTick", at = @At("TAIL"))
@@ -274,7 +303,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
         if (enchanter != null) { // If enchanter exists, it means we are running enchanting automation
             AutoEnchanter.TickStatus status = enchanter.tick();
-            System.out.println("Enchanter status: " + status);
+            // System.out.println("Enchanter status: " + status);
 
             switch (status) {
                 case OBSTRUCTION_ERROR, TIMEOUT_ERROR, FULLY_DONE:
@@ -292,6 +321,9 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
                     return;
                 case LEFT_INPUT_INSERTED, RIGHT_INPUT_INSERTED:
                     selectedItemManager.checkContradictions(handler);
+                    break;
+                case OUTPUT_PICKED_UP:
+                    outputSave = handler.getCursorStack();
                     break;
                 case STEP_DONE:
                     selectedItemManager.updateUpgradedItem(enchanter.currentInstruction.leftId, handler.getSlot(enchanter.currentInstruction.leftId).getStack());

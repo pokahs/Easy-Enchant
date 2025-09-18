@@ -54,15 +54,13 @@ You can change the **optimizing mode** here as well, along with some other new o
 
 ## Limitations
 
-Apart from the mod being early in dev and kinda likely to crash, there are kinda two big limitations:
+Apart from the mod being early in dev and kinda likely to crash, there are limitations:
 
 - Combining lower level enchants together to make a higher level enchant is not supported well. Easy Enchant currently only supports this idea up to two books;
 if you try to select four Looting I books + sword to make one Looting III sword, Easy Enchant will only allow you to select two Looting I books to make Looting II.
 I do want to tackle this issue, but it's niche enough imo that I cba yet.
 
-- If the anvil breaks while enchanting, Easy Enchant will lose selection of the product item. This means if you are ever in the middle of enchanting an item and the anvil breaks,
-you need to make sure you reselect the deselected item before enchanting again. Not sure if theres an elegant solution to this problem apart from just trying to track where the product item
-may have ended up and auto selecting it again in the background; haven't tested yet. This is also an issue I plan to tackle though.
+- Instant Enchant does nottttt like when anvil breaks, all items basically get deselected cuz auto enchanter just sends all packets and doesnt track at all if anvil breaks in between
 
 ### Credits
 
