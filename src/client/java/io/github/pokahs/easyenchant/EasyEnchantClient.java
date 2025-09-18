@@ -33,7 +33,7 @@ public class EasyEnchantClient implements ClientModInitializer {
                             double scale = mc.getWindow().getScaleFactor();
                             double mx = mc.mouse.getX() / scale;
                             double my = mc.mouse.getY() / scale;
-                            ((EasyEnchantAnvil)screen).toggleBagItem(mx, my);  // <-- your method on the screen
+                            ((EasyEnchantAnvil)screen).toggleSelectedItem(mx, my);  // <-- your method on the screen
                             return false; // block vanilla (prevents typing that key into the name field)
                         }
                         return true; // allow all other keys
