@@ -117,7 +117,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
             .dimensions(x + BUTTON_WIDTH, y + backgroundHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
 
-        statusManager = new StatusManager(textRenderer, x + backgroundWidth / 2, y + backgroundHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING, MinecraftClient.getInstance().getWindow().getScaledWidth());
+        statusManager = new StatusManager(textRenderer, backgroundWidth / 2, backgroundHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING, MinecraftClient.getInstance().getWindow().getScaledWidth());
         
         handleItemSelectionChange(); // Handles if differences in saved manager vs current inventory
 
@@ -250,9 +250,9 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
     }
 
     
-    @Override
-    public void handledScreenTick() {
-        super.handledScreenTick();
+    
+	@Inject(method = "handledScreenTick", at = @At("TAIL"))
+    public void handledScreenTick(CallbackInfo ci) {
 
         if (enchanting()) updateEnchanter();
         else {
@@ -270,8 +270,8 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         return plan != null;
     }
 
-	@Inject(method = "renderForeground", at = @At("HEAD"))
-    public void renderForeground(DrawContext ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+	@Inject(method = "drawForeground", at = @At("HEAD"))
+    public void drawForeground(DrawContext ctx, int mouseX, int mouseY, CallbackInfo ci) {
         
         for (int id : selectedItemManager.getItemIds()) {
             renderHighlight(ctx, handler.getSlot(id));
@@ -281,10 +281,17 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         if (statusManager != null) statusManager.tryRender(ctx);
     }
 
+    
+	// @Inject(method = "onSlotUpdate", at = @At("HEAD"))
+    // public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack, CallbackInfo ci) {
+        
+    //     MinecraftClient.getInstance().player.sendMessage(Text.of(Integer.toString(slotId) + " hi"), false);
+    // }
+
+
     private void renderHighlight(DrawContext ctx, Slot slot) {
-        int sx = this.x + slot.x, sy = this.y + slot.y;
-        ctx.fill(sx, sy, sx + 16, sy + 16, cfg.selectedItemFillColor);
-        ctx.drawBorder(sx, sy, 16, 16, cfg.selectedItemBorderColor);
+        ctx.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, cfg.selectedItemFillColor);
+        ctx.drawBorder(slot.x, slot.y, 16, 16, cfg.selectedItemBorderColor);
     }
 
     public void setButtonsTooltip(Tooltip tooltip) {

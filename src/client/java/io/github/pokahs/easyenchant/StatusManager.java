@@ -7,6 +7,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.ColorHelper;
 
 public class StatusManager {
 
@@ -17,16 +18,16 @@ public class StatusManager {
         WARNING(0xFF8F00),
         PROCESSING(0x6F00FF);
 
-        private final int RGB;
+        private final int ARGB;
 
         // Constructor
         TextColor(int RGB) {
-            this.RGB = RGB;
+            this.ARGB = ColorHelper.fullAlpha(RGB);
         }
 
         // Getter
-        public int getRGB() {
-            return RGB;
+        public int getARGB() {
+            return ARGB;
         }
     }
 
@@ -96,21 +97,16 @@ public class StatusManager {
         long now = net.minecraft.util.Util.getMeasuringTimeMs();
         if (!statusLines.isEmpty() && endStatusTime > now) {
 
-            if (startFadeTime > now) render(ctx, statusColor.getRGB());
+            if (startFadeTime > now) render(ctx, statusColor.getARGB());
             else {
                 float remainingMs = endStatusTime - now;
                 float fade = remainingMs / defaultFadeDuration;
-                int alpha = Math.max(1, (int)(fade * 255.0f));
 
-                if (alpha > 8) { // put a gun to my head i could not explain why vals below this randomly cause opaque rendering
+                int argb = ColorHelper.withAlpha(fade, statusColor.getARGB());
+                    
 
-                    int argb = (alpha << 24) | statusColor.getRGB();
+                render(ctx, argb);
 
-                    render(ctx, argb);
-
-                } else {
-                    statusLines = java.util.Collections.emptyList();
-                }
             }
         }
     }
