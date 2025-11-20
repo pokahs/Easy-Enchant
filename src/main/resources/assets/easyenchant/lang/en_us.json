@@ -1,7 +1,7 @@
 {
     
   "key.easyenchant.select_item" : "Select item",
-  "category.easyenchant" : "Easy Enchant",
+  "key.category.easyenchant.ldm" : "Easy Enchant",
 
   "easyenchant.status.enchanting_complete": "Enchanting complete!",
   "easyenchant.status.step_complete": "Enchanting step complete!",

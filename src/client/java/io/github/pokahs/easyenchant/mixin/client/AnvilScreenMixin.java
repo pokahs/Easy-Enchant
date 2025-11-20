@@ -281,17 +281,10 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         if (statusManager != null) statusManager.tryRender(ctx);
     }
 
-    
-	// @Inject(method = "onSlotUpdate", at = @At("HEAD"))
-    // public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack, CallbackInfo ci) {
-        
-    //     MinecraftClient.getInstance().player.sendMessage(Text.of(Integer.toString(slotId) + " hi"), false);
-    // }
-
 
     private void renderHighlight(DrawContext ctx, Slot slot) {
         ctx.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, cfg.selectedItemFillColor);
-        ctx.drawBorder(slot.x, slot.y, 16, 16, cfg.selectedItemBorderColor);
+        ctx.drawStrokedRectangle(slot.x + width / 2 - backgroundWidth / 2, slot.y + height / 2 - backgroundHeight / 2, 16, 16, cfg.selectedItemBorderColor);
     }
 
     public void setButtonsTooltip(Tooltip tooltip) {
