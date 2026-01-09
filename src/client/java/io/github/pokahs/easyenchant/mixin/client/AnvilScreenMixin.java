@@ -93,12 +93,10 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
             .dimensions(x + BUTTON_WIDTH, y + backgroundHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
         
-
         modeButton = addDrawableChild(
-            CyclingButtonWidget.<Mode>builder((Mode mode) ->
-                    mode == Mode.LEVELS ? Text.translatable("easyenchant.button.levels") : Text.translatable("easyenchant.button.xp"))
+            CyclingButtonWidget.builder((Mode mode) ->
+                    mode == Mode.LEVELS ? Text.translatable("easyenchant.button.levels") : Text.translatable("easyenchant.button.xp"), cfg.mode)
                 .values(Mode.LEVELS, Mode.XP)
-                .initially(cfg.mode)
                 .omitKeyText()
                 .build(
                     x, y + backgroundHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT,
@@ -284,7 +282,8 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
     private void renderHighlight(DrawContext ctx, Slot slot) {
         ctx.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, cfg.selectedItemFillColor);
-        ctx.drawStrokedRectangle(slot.x + width / 2 - backgroundWidth / 2, slot.y + height / 2 - backgroundHeight / 2, 16, 16, cfg.selectedItemBorderColor);
+        ctx.drawStrokedRectangle(slot.x, slot.y, 16, 16, cfg.selectedItemBorderColor);
+        
     }
 
     public void setButtonsTooltip(Tooltip tooltip) {
