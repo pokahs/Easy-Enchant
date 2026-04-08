@@ -1,8 +1,7 @@
 package io.github.pokahs.easyenchant;
 
-import net.minecraft.enchantment.Enchantment;
-
 import java.util.*;
+import net.minecraft.world.item.enchantment.Enchantment;
 import io.github.pokahs.easyenchant.SelectedItemManager.EnchantableItem;
 import io.github.pokahs.easyenchant.SelectedItemManager.EnchantableItem.LeveledEnchant;
 import io.github.pokahs.easyenchant.ModConfig.Mode;
@@ -217,12 +216,12 @@ public final class EnchantOptimizer {
             int conflicts = 0;
 
             // If enchant not valid (on gear), simply add one to conflict
-            if (left.isGear && !newEnchant.enchant().value().isAcceptableItem(left.stack)) continue;
+            if (left.isGear && !newEnchant.enchant().value().canEnchant(left.stack)) continue;
             else { 
                 // Is acceptable enchant / should change the product
                 for (LeveledEnchant existing : left.enchants) {
 
-                    if (!Enchantment.canBeCombined(newEnchant.enchant(), existing.enchant())) {
+                    if (!Enchantment.areCompatible(newEnchant.enchant(), existing.enchant())) {
                         if (newEnchant.enchant().equals(existing.enchant())) {
 
                             // Get future level of enchantment if combining two of same enchantment

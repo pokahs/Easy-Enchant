@@ -1,13 +1,12 @@
 package io.github.pokahs.easyenchant;
 
 import java.util.List;
-
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import io.github.pokahs.easyenchant.SelectedItemManager.AddResult;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.ColorHelper;
 
 public class StatusManager {
 
@@ -18,20 +17,20 @@ public class StatusManager {
         WARNING(0xFF8F00),
         PROCESSING(0x6F00FF);
 
-        private final int ARGB;
+        private final int A_RGB;
 
         // Constructor
         TextColor(int RGB) {
-            this.ARGB = ColorHelper.fullAlpha(RGB);
+            this.A_RGB = ARGB.opaque(RGB);
         }
 
         // Getter
-        public int getARGB() {
-            return ARGB;
+        public int getA_RGB() {
+            return A_RGB;
         }
     }
 
-    private TextRenderer textRenderer;
+    private Font textRenderer;
 
     private int x;
     private int y;
@@ -46,11 +45,11 @@ public class StatusManager {
 
     private TextColor statusColor = TextColor.DEFAULT;
 
-    private List<OrderedText> statusLines = java.util.Collections.emptyList();
+    private List<FormattedCharSequence> statusLines = java.util.Collections.emptyList();
 
 
 
-    public StatusManager(TextRenderer textRenderer, int x, int y, int screenWidth) {
+    public StatusManager(Font textRenderer, int x, int y, int screenWidth) {
         this.textRenderer = textRenderer;
         this.x = x;
         this.y = y;
@@ -60,11 +59,11 @@ public class StatusManager {
     public void updateStatusTo(String msg, TextColor color, int opaqueDuration) {
         this.statusColor = color;
         this.opaqueDuration = opaqueDuration;
-        this.startFadeTime = net.minecraft.util.Util.getMeasuringTimeMs() + this.opaqueDuration;
+        this.startFadeTime = net.minecraft.util.Util.getMillis() + this.opaqueDuration;
         this.endStatusTime = this.startFadeTime + defaultFadeDuration;
 
-        this.statusLines = this.textRenderer.wrapLines(
-            Text.literal(msg),
+        this.statusLines = this.textRenderer.split(
+            Component.literal(msg),
             this.screenWidth
         );
         
@@ -82,27 +81,27 @@ public class StatusManager {
         updateStatusTo(result.failReason(), result.successful() ? TextColor.SUCCESS : TextColor.ERROR);
     }
 
-    private void render(DrawContext ctx, int color) {
+    private void render(GuiGraphicsExtractor ctx, int color) {
         for (int i = 0; i < statusLines.size(); i++) {
-            OrderedText line = statusLines.get(i);
-            int lineWidth = textRenderer.getWidth(line);
+            FormattedCharSequence line = statusLines.get(i);
+            int lineWidth = textRenderer.width(line);
             int lineX = this.x - lineWidth / 2;
 
-            ctx.drawText(textRenderer, line, lineX, this.y + i * textRenderer.fontHeight, color, false);
+            ctx.text(textRenderer, line, lineX, this.y + i * textRenderer.lineHeight, color);
         }
     }
 
 
-    public void tryRender(DrawContext ctx) {
-        long now = net.minecraft.util.Util.getMeasuringTimeMs();
+    public void tryRender(GuiGraphicsExtractor ctx) {
+        long now = net.minecraft.util.Util.getMillis();
         if (!statusLines.isEmpty() && endStatusTime > now) {
 
-            if (startFadeTime > now) render(ctx, statusColor.getARGB());
+            if (startFadeTime > now) render(ctx, statusColor.getA_RGB());
             else {
                 float remainingMs = endStatusTime - now;
                 float fade = remainingMs / defaultFadeDuration;
 
-                int argb = ColorHelper.withAlpha(fade, statusColor.getARGB());
+                int argb = ARGB.color(fade, statusColor.getA_RGB());
                     
 
                 render(ctx, argb);

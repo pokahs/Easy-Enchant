@@ -2,13 +2,12 @@ package io.github.pokahs.easyenchant;
 
 import java.util.Iterator;
 import java.util.List;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.inventory.ClickAction;
+import net.minecraft.world.item.ItemStack;
 import io.github.pokahs.easyenchant.EnchantOptimizer.Instruction;
-//import me.shedaniel.autoconfig.AutoConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.AnvilScreenHandler;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.world.inventory.ContainerInput;
 
 public class AutoEnchanter {
 
@@ -48,11 +47,11 @@ public class AutoEnchanter {
     public boolean isStepMode = false;
     public boolean runningLastStep;
 
-    private AnvilScreenHandler handler;
+    private AnvilMenu handler;
 
     public Action currentAction = Action.INPUT_LEFT_ITEM;
 
-    public AutoEnchanter(AnvilScreenHandler handler, List<Instruction> instructions, int packetTickDelay, boolean allowRenaming, boolean instant) {
+    public AutoEnchanter(AnvilMenu handler, List<Instruction> instructions, int packetTickDelay, boolean allowRenaming, boolean instant) {
         this.handler = handler;
         this.instructions = instructions == null ? null : instructions.iterator();
         this.packetTickDelay = packetTickDelay;
@@ -60,7 +59,7 @@ public class AutoEnchanter {
         this.instant = instant;
     }
 
-    public AutoEnchanter(AnvilScreenHandler handler, Instruction instruction, int packetTickDelay, boolean allowRenaming, boolean instant, boolean runningLastStep) {
+    public AutoEnchanter(AnvilMenu handler, Instruction instruction, int packetTickDelay, boolean allowRenaming, boolean instant, boolean runningLastStep) {
         this(handler, List.of(instruction), packetTickDelay, allowRenaming, instant);
         this.isStepMode = true;
         this.runningLastStep = runningLastStep;
@@ -85,7 +84,7 @@ public class AutoEnchanter {
                 if (isSlotOccupied(LEFT_INPUT_SLOT)) {
                     return TickStatus.OBSTRUCTION_ERROR;
                 } else {
-                    clickSlot(currentInstruction.leftId, SlotActionType.QUICK_MOVE);
+                    clickSlot(currentInstruction.leftId, ContainerInput.QUICK_MOVE);
                     currentAction = Action.INPUT_RIGHT_ITEM;
                     return TickStatus.LEFT_INPUT_INSERTED;
                 }
@@ -96,7 +95,7 @@ public class AutoEnchanter {
                 if (isSlotOccupied(RIGHT_INPUT_SLOT)) {
                     return TickStatus.OBSTRUCTION_ERROR;
                 } else {
-                    clickSlot(currentInstruction.rightId, SlotActionType.QUICK_MOVE);
+                    clickSlot(currentInstruction.rightId, ContainerInput.QUICK_MOVE);
                     currentAction = Action.PICKUP_OUTPUT_ITEM;
                     return TickStatus.RIGHT_INPUT_INSERTED;
                 }
@@ -108,7 +107,7 @@ public class AutoEnchanter {
                     
                     if (allowRenaming && runningLastStep) return TickStatus.FULLY_DONE; // Stop here to allow renaming
 
-                    clickSlot(OUTPUT_SLOT, SlotActionType.PICKUP);
+                    clickSlot(OUTPUT_SLOT, ContainerInput.PICKUP);
                     currentAction = Action.PLACE_OUTPUT_ITEM;
                     return TickStatus.OUTPUT_PICKED_UP;
                 } else {
@@ -122,7 +121,7 @@ public class AutoEnchanter {
                 if (isSlotOccupied(LEFT_INPUT_SLOT)) {
                     return TickStatus.OBSTRUCTION_ERROR;
                 } else {   
-                    clickSlot(currentInstruction.leftId, SlotActionType.PICKUP);
+                    clickSlot(currentInstruction.leftId, ContainerInput.PICKUP);
                 }
 
 
@@ -137,13 +136,13 @@ public class AutoEnchanter {
 
     }
 
-    private void clickSlot(int slotId, SlotActionType actionType) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.interactionManager.clickSlot(handler.syncId, slotId, 0, actionType, client.player);
+    private void clickSlot(int slotId, ContainerInput actionType) {
+        Minecraft client = Minecraft.getInstance();
+        client.gameMode.handleContainerInput(handler.containerId, slotId, 0, actionType, client.player);
     }
 
     private boolean isSlotOccupied(int slotId) {
-        ItemStack stack = handler.getSlot(slotId).getStack();
+        ItemStack stack = handler.getSlot(slotId).getItem();
         return !stack.isEmpty();
     }
 }

@@ -1,27 +1,14 @@
 package io.github.pokahs.easyenchant.mixin.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.screen.ingame.AnvilScreen;
-import net.minecraft.client.gui.screen.ingame.ForgingScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.CyclingButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.AnvilScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import com.mojang.authlib.minecraft.client.MinecraftClient;
+import com.terraformersmc.modmenu.ModMenu;
 
 import io.github.pokahs.easyenchant.AutoEnchanter;
 import io.github.pokahs.easyenchant.EasyEnchantAnvil;
@@ -36,28 +23,45 @@ import io.github.pokahs.easyenchant.ModConfig.Mode;
 import io.github.pokahs.easyenchant.StatusManager;
 import io.github.pokahs.easyenchant.StatusManager.TextColor;
 import me.shedaniel.autoconfig.AutoConfig;
+import me.shedaniel.autoconfig.AutoConfigClient;
+import me.shedaniel.clothconfig2.api.ConfigBuilder;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.inventory.AnvilScreen;
+import net.minecraft.client.gui.screens.inventory.ItemCombinerScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 @Mixin(AnvilScreen.class)
-public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler> implements EasyEnchantAnvil {
+public abstract class AnvilScreenMixin extends ItemCombinerScreen<AnvilMenu> implements EasyEnchantAnvil {
 
     
     ModConfig cfg = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
     
-    @Shadow @Final static private Identifier TEXTURE;
+    @Shadow @Final static private Identifier ANVIL_LOCATION;
 
-    public AnvilScreenMixin(AnvilScreenHandler handler, PlayerInventory inventory, Text title) {
-      super(handler, inventory, title, TEXTURE);
+    public AnvilScreenMixin(AnvilMenu handler, Inventory inventory, Component title) {
+      super(handler, inventory, title, ANVIL_LOCATION);
     }
 	
 
-	private ButtonWidget enchantFullyButton;
-	private ButtonWidget enchantStepButton;
+	private Button enchantFullyButton;
+	private Button enchantStepButton;
 
-    private final int BUTTON_WIDTH = backgroundWidth / 2;
+    private final int BUTTON_WIDTH = imageWidth / 2;
     private final int BUTTON_HEIGHT = 20;
     private final int STATUS_PADDING = 5;
 
-    private CyclingButtonWidget<Mode> modeButton;
+    private CycleButton<Mode> modeButton;
 
     private StatusManager statusManager;
     
@@ -70,37 +74,40 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
     private ItemStack outputSave = ItemStack.EMPTY;
 
     
-    @Inject(method = "setup", at = @At("TAIL"))
+    @Inject(method = "subInit", at = @At("TAIL"))
     protected void setup(CallbackInfo ci) {
+
         
         cfg = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
 
-        enchantFullyButton = addDrawableChild(ButtonWidget.builder(Text.translatable("easyenchant.button.enchant_fully"), b -> {
-            enchanter = new AutoEnchanter(handler, plan.instructions, cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant);
+        enchantFullyButton = addRenderableWidget(Button.builder(Component.translatable("easyenchant.button.enchant_fully"), b -> {
+            enchanter = new AutoEnchanter(menu, plan.instructions, cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant);
             plan = null;
             handleEnchanterInitiation();
         })
-            .dimensions(x, y + backgroundHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
+            .bounds(leftPos, topPos + imageHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
 
 
-        enchantStepButton = addDrawableChild(ButtonWidget.builder(Text.translatable("easyenchant.button.enchant_step"), b -> {
+        enchantStepButton = addRenderableWidget(Button.builder(Component.translatable("easyenchant.button.enchant_step"), b -> {
             boolean noMoreInstructions = plan.instructions.size() == 1;
-            enchanter = new AutoEnchanter(handler, plan.instructions.getFirst(), cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant, noMoreInstructions);
+            enchanter = new AutoEnchanter(menu, plan.instructions.getFirst(), cfg.packetTickDelay, cfg.allowRenaming, cfg.instantEnchant, noMoreInstructions);
             plan = noMoreInstructions ? null : new Plan(plan.instructions.subList(1, plan.instructions.size()));
             handleEnchanterInitiation();
         })
-            .dimensions(x + BUTTON_WIDTH, y + backgroundHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
+            .bounds(leftPos + BUTTON_WIDTH, topPos + imageHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
+
+        // CycleButton.builder(null, null).
         
-        modeButton = addDrawableChild(
-            CyclingButtonWidget.builder((Mode mode) ->
-                    mode == Mode.LEVELS ? Text.translatable("easyenchant.button.levels") : Text.translatable("easyenchant.button.xp"), cfg.mode)
-                .values(Mode.LEVELS, Mode.XP)
-                .omitKeyText()
-                .build(
-                    x, y + backgroundHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT,
-                    Text.empty(),
+        modeButton = addRenderableWidget(
+            CycleButton.builder((Mode mode) ->
+                    mode == Mode.LEVELS ? Component.translatable("easyenchant.button.levels") : Component.translatable("easyenchant.button.xp"), cfg.mode)
+                .withValues(Mode.LEVELS, Mode.XP)
+                .displayOnlyValue()
+                .create(
+                    leftPos, topPos + imageHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT,
+                    Component.empty(),
                     (btn, mode) -> {
                         tryOptimize();
                         cfg.mode = mode;
@@ -109,20 +116,24 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
             );
         
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable("easyenchant.button.config"), b -> {
-            MinecraftClient.getInstance().setScreen(AutoConfig.getConfigScreen(ModConfig.class, this).get());
+        addRenderableWidget(Button.builder(Component.translatable("easyenchant.button.config"), b -> {
+            // Minecraft.getInstance().setScreen(AutoConfig.getConfigHolder(ModConfig.class).getConfig());
+            // Minecraft.getInstance().setScreen(ConfigBuilder.create().setParentScreen(Minecraft.getInstance().screen).build());
+            // Minecraft.getInstance().setScreen(ModMenu.getConfigScreen(AutoConfig.getConfigHolder(ModConfig.class).getConfig()).apply(Minecraft.getInstance().screen));
+            Minecraft.getInstance().setScreen(AutoConfigClient.getConfigScreen(ModConfig.class, Minecraft.getInstance().screen).get());
+
         })
-            .dimensions(x + BUTTON_WIDTH, y + backgroundHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT)
+            .bounds(leftPos + BUTTON_WIDTH, topPos + imageHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
 
-        statusManager = new StatusManager(textRenderer, backgroundWidth / 2, backgroundHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING, MinecraftClient.getInstance().getWindow().getScaledWidth());
+        statusManager = new StatusManager(font, imageWidth / 2 + leftPos, imageHeight + 2 * BUTTON_HEIGHT + STATUS_PADDING + topPos, Minecraft.getInstance().getWindow().getGuiScaledWidth());
         
         handleItemSelectionChange(); // Handles if differences in saved manager vs current inventory
 
         // statusManager.updateStatusTo("Screen loaded!", TextColor.SUCCESS);
 
         // Intro message if manager empty, guides user how to start
-        if (!selectedItemManager.hasGear() && !selectedItemManager.hasBooks()) statusManager.updateStatusTo(Text.translatable("easyenchant.status.select_by_pressing", EasyEnchantClient.SELECT_ITEM_KEY.getBoundKeyLocalizedText()).getString(), TextColor.DEFAULT, 5000);
+        if (!selectedItemManager.hasGear() && !selectedItemManager.hasBooks()) statusManager.updateStatusTo(Component.translatable("easyenchant.status.select_by_pressing", EasyEnchantClient.SELECT_ITEM_KEY.getTranslatedKeyMessage()).getString(), TextColor.DEFAULT, 5000);
 
     }
 
@@ -139,7 +150,7 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         if (enchanting()) return;
 
         // If focused on text field, ignore key trigger
-        if (this.getFocused() instanceof TextFieldWidget tf && tf.isActive()) return;
+        if (this.getFocused() instanceof EditBox tf && tf.canConsumeInput()) return;
 
         // Grab slot at mouse position
         Slot hovered = ((HandledScreenInvoker) this)
@@ -147,11 +158,11 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
         // If not actually a slot or not an inventory slot, ignore
         if (hovered == null) return;
-        if (!(hovered.inventory instanceof PlayerInventory)) return;
+        if (!(hovered.container instanceof Inventory)) return;
 
         // Get id (id = index number of slot in inventory), get stack, if empty, ignore
-        int id = hovered.id;
-        ItemStack stack = hovered.getStack();
+        int id = hovered.index;
+        ItemStack stack = hovered.getItem();
         if (stack.isEmpty()) return;
 
         boolean alreadySelected = selectedItemManager.hasId(id);
@@ -183,20 +194,20 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
             if (hasBooks && !hasGear) {
 
-                setButtonsTooltip(Tooltip.of(Text.translatable("easyenchant.button.select_gear")));
+                setButtonsTooltip(Tooltip.create(Component.translatable("easyenchant.button.select_gear")));
             } else if (!hasBooks && hasGear) {
                 
-                setButtonsTooltip(Tooltip.of(Text.translatable("easyenchant.button.select_books")));
+                setButtonsTooltip(Tooltip.create(Component.translatable("easyenchant.button.select_books")));
             } else {
                 
-                setButtonsTooltip(Tooltip.of(Text.translatable("easyenchant.button.select_items")));
+                setButtonsTooltip(Tooltip.create(Component.translatable("easyenchant.button.select_items")));
             }
         }
     }
 
     public void handleEnchanterInitiation() {
-        statusManager.updateStatusTo(Text.translatable("easyenchant.status.running_optimizer").getString(), TextColor.PROCESSING, 100000);
-        setButtonsTooltip(Tooltip.of(Text.empty()));
+        statusManager.updateStatusTo(Component.translatable("easyenchant.status.running_optimizer").getString(), TextColor.PROCESSING, 100000);
+        setButtonsTooltip(Tooltip.create(Component.empty()));
         setButtonsAvailability(false);
     }
 
@@ -209,13 +220,13 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
         if (!planReady()) {
             setButtonsAvailability(false);
-            if (selectedItemManager.isValid()) setButtonsTooltip(Tooltip.of(Text.translatable("easyenchant.button.too_expensive"))); // plan is null but selected items valid if plan was deemed impossible without triggering "Too expensive!"
+            if (selectedItemManager.isValid()) setButtonsTooltip(Tooltip.create(Component.translatable("easyenchant.button.too_expensive"))); // plan is null but selected items valid if plan was deemed impossible without triggering "Too expensive!"
         } else {
-            if (plan.lowestTotalXP == plan.highestTotalXP) enchantFullyButton.setTooltip(Tooltip.of(Text.translatable("easyenchant.button.enchant_for_levels_and_xp", plan.totalLevels, plan.lowestTotalXP)));
-            else enchantFullyButton.setTooltip(Tooltip.of(Text.translatable("easyenchant.button.enchant_for_levels_and_xp_range", plan.totalLevels, plan.lowestTotalXP, plan.highestTotalXP)));
+            if (plan.lowestTotalXP == plan.highestTotalXP) enchantFullyButton.setTooltip(Tooltip.create(Component.translatable("easyenchant.button.enchant_for_levels_and_xp", plan.totalLevels, plan.lowestTotalXP)));
+            else enchantFullyButton.setTooltip(Tooltip.create(Component.translatable("easyenchant.button.enchant_for_levels_and_xp_range", plan.totalLevels, plan.lowestTotalXP, plan.highestTotalXP)));
 
             Instruction first = plan.instructions.getFirst();
-            enchantStepButton.setTooltip(Tooltip.of(Text.translatable("easyenchant.button.enchant_for_levels_and_xp", first.levelCost, first.xpCost)));
+            enchantStepButton.setTooltip(Tooltip.create(Component.translatable("easyenchant.button.enchant_for_levels_and_xp", first.levelCost, first.xpCost)));
 
         }
     }
@@ -224,23 +235,23 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
     @Override
     public void removed() {
         super.removed(); // Also need to check if its last instruction, otherwise reselects completely done product
-        if (enchanting() && !enchanter.runningLastStep && outputSave == handler.getCursorStack()) {
+        if (enchanting() && !enchanter.runningLastStep && outputSave == menu.getCarried()) {
             // MinecraftClient.getInstance().player.sendMessage(Text.of("Anvil frickin broke!"), false);
             
             // Hotbar: [30, size)
-            for (int i = 30; i < handler.slots.size(); i++) {
-                Slot slot = handler.slots.get(i);
-                if (slot.getStack().isEmpty()) {
-                    selectedItemManager.tryAddItem(slot.id, outputSave);
+            for (int i = 30; i < menu.slots.size(); i++) {
+                Slot slot = menu.slots.get(i);
+                if (slot.getItem().isEmpty()) {
+                    selectedItemManager.tryAddItem(slot.index, outputSave);
                     return; // done
                 }
             }
 
             // Inventory: [3, 30), ignore slot 0, 1, 2 as anvil slots
             for (int i = 3; i < 30; i++) {
-                Slot slot = handler.slots.get(i);
-                if (slot.getStack().isEmpty()) {
-                    selectedItemManager.tryAddItem(slot.id, outputSave);
+                Slot slot = menu.slots.get(i);
+                if (slot.getItem().isEmpty()) {
+                    selectedItemManager.tryAddItem(slot.index, outputSave);
                     return;
                 }
             }
@@ -249,12 +260,12 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
     
     
-	@Inject(method = "handledScreenTick", at = @At("TAIL"))
+	@Inject(method = "containerTick", at = @At("TAIL"))
     public void handledScreenTick(CallbackInfo ci) {
 
         if (enchanting()) updateEnchanter();
         else {
-            selectedItemManager.checkContradictions(handler);
+            selectedItemManager.checkContradictions(menu);
             if (planReady()) updateButtons();
         }
 
@@ -268,21 +279,21 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
         return plan != null;
     }
 
-	@Inject(method = "drawForeground", at = @At("HEAD"))
-    public void drawForeground(DrawContext ctx, int mouseX, int mouseY, CallbackInfo ci) {
+	@Inject(method = "extractBackground", at = @At("TAIL"))
+    public void drawForeground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a, CallbackInfo ci) {
         
         for (int id : selectedItemManager.getItemIds()) {
-            renderHighlight(ctx, handler.getSlot(id));
+            renderHighlight(graphics, menu.getSlot(id));
         }
 
         // Render status message
-        if (statusManager != null) statusManager.tryRender(ctx);
+        if (statusManager != null) statusManager.tryRender(graphics);
     }
 
 
-    private void renderHighlight(DrawContext ctx, Slot slot) {
-        ctx.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, cfg.selectedItemFillColor);
-        ctx.drawStrokedRectangle(slot.x, slot.y, 16, 16, cfg.selectedItemBorderColor);
+    private void renderHighlight(GuiGraphicsExtractor ctx, Slot slot) {
+        ctx.fill(slot.x + leftPos, slot.y + topPos, slot.x + leftPos + 16, slot.y + topPos + 16, cfg.selectedItemFillColor);
+        ctx.outline(slot.x + leftPos, slot.y + topPos, 16, 16, cfg.selectedItemBorderColor);
         
     }
 
@@ -299,28 +310,28 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
             switch (status) {
                 case OBSTRUCTION_ERROR, TIMEOUT_ERROR, FULLY_DONE:
-                    setButtonsTooltip(Tooltip.of(Text.translatable("easyenchant.button.select_items")));
+                    setButtonsTooltip(Tooltip.create(Component.translatable("easyenchant.button.select_items")));
                     setButtonsAvailability(false);
                     
                     switch (status) {
-                        case OBSTRUCTION_ERROR: statusManager.updateStatusTo(Text.translatable("easyenchant.status.item_obstruction").getString(), TextColor.ERROR, 5000);
-                        case TIMEOUT_ERROR: statusManager.updateStatusTo(Text.translatable("easyenchant.status.timeout").getString(), TextColor.ERROR, 5000);
-                        case FULLY_DONE: statusManager.updateStatusTo(Text.translatable("easyenchant.status.enchanting_complete").getString(), TextColor.SUCCESS);
+                        case OBSTRUCTION_ERROR: statusManager.updateStatusTo(Component.translatable("easyenchant.status.item_obstruction").getString(), TextColor.ERROR, 5000);
+                        case TIMEOUT_ERROR: statusManager.updateStatusTo(Component.translatable("easyenchant.status.timeout").getString(), TextColor.ERROR, 5000);
+                        case FULLY_DONE: statusManager.updateStatusTo(Component.translatable("easyenchant.status.enchanting_complete").getString(), TextColor.SUCCESS);
                         default: break;
                     }
 
                     enchanter = null;
                     return;
                 case LEFT_INPUT_INSERTED, RIGHT_INPUT_INSERTED:
-                    selectedItemManager.checkContradictions(handler);
+                    selectedItemManager.checkContradictions(menu);
                     break;
                 case OUTPUT_PICKED_UP:
-                    outputSave = handler.getCursorStack();
+                    outputSave = menu.getCarried();
                     break;
                 case STEP_DONE:
-                    selectedItemManager.updateUpgradedItem(enchanter.currentInstruction.leftId, handler.getSlot(enchanter.currentInstruction.leftId).getStack());
+                    selectedItemManager.updateUpgradedItem(enchanter.currentInstruction.leftId, menu.getSlot(enchanter.currentInstruction.leftId).getItem());
                     if (enchanter.isStepMode) {
-                        statusManager.updateStatusTo(Text.translatable("easyenchant.status.step_complete").getString(), TextColor.SUCCESS);
+                        statusManager.updateStatusTo(Component.translatable("easyenchant.status.step_complete").getString(), TextColor.SUCCESS);
                             
                         tryOptimize(); // plan changed, update lvl tooltips etc
                         enchanter = null; // step mode, auto enchanting should be marked done even if enchanting not fully done
@@ -338,9 +349,9 @@ public abstract class AnvilScreenMixin extends ForgingScreen<AnvilScreenHandler>
 
     public void updateButtons() {
 
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
     
-        boolean inCreative = player.getAbilities().creativeMode;
+        boolean inCreative = player.getAbilities().instabuild;
 
         int playerLevels = player.experienceLevel;
 

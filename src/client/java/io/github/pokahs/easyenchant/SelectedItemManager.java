@@ -1,18 +1,16 @@
 package io.github.pokahs.easyenchant;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.screen.AnvilScreenHandler;
-import net.minecraft.text.Text;
-
 import java.util.*;
-
 import io.github.pokahs.easyenchant.SelectedItemManager.EnchantableItem.LeveledEnchant;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 public final class SelectedItemManager {
 
@@ -34,14 +32,14 @@ public final class SelectedItemManager {
     public record AddResult(boolean successful, String failReason) {
         public static AddResult pass() { return new AddResult(true, null); }
         public static AddResult fail(String reason) { return new AddResult(false, reason); }
-        public static AddResult fail(Text reason) { return new AddResult(false, reason.getString()); }
+        public static AddResult fail(Component reason) { return new AddResult(false, reason.getString()); }
     }
 
     public sealed static class EnchantableItem permits EnchantedBook, Gear {
 
-        public record LeveledEnchant(RegistryEntry<Enchantment> enchant, int level) {
+        public record LeveledEnchant(Holder<Enchantment> enchant, int level) {
             public String toString() {
-                return Enchantment.getName(enchant, level).getString();
+                return Enchantment.getFullname(enchant, level).getString();
             }
         }
 
@@ -59,7 +57,7 @@ public final class SelectedItemManager {
             this.stack = stack; // .copy()
             this.isGear = isGear;
 
-            repairCost = stack.getOrDefault(DataComponentTypes.REPAIR_COST, 0);
+            repairCost = stack.getOrDefault(DataComponents.REPAIR_COST, 0);
         }
 
         public EnchantableItem(boolean isGear, int id, ItemStack stack, int repairCost, ArrayList<LeveledEnchant> enchants) {
@@ -88,9 +86,9 @@ public final class SelectedItemManager {
         public Gear(int id, ItemStack stack) {
             super(id, stack, true);
 
-            ItemEnchantmentsComponent components = stack.getEnchantments();
+            ItemEnchantments components = stack.getEnchantments();
 
-            for (RegistryEntry<Enchantment> enchantEntry : components.getEnchantments()) {
+            for (Holder<Enchantment> enchantEntry : components.keySet()) {
                 enchants.add(new LeveledEnchant(enchantEntry, components.getLevel(enchantEntry)));
             }
 
@@ -108,10 +106,10 @@ public final class SelectedItemManager {
         public EnchantedBook(int id, ItemStack stack) {
             super(id, stack, false);
 
-            ItemEnchantmentsComponent stored =
-                stack.getOrDefault(DataComponentTypes.STORED_ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
+            ItemEnchantments stored =
+                stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
 
-            for (Object2IntMap.Entry<RegistryEntry<Enchantment>> e : stored.getEnchantmentEntries()) {
+            for (Object2IntMap.Entry<Holder<Enchantment>> e : stored.entrySet()) {
                 this.enchants.add(new LeveledEnchant(e.getKey(), e.getIntValue()));
             }
             
@@ -125,7 +123,7 @@ public final class SelectedItemManager {
         public EnchantedBook culledForGear(Gear gear) {
             ArrayList<LeveledEnchant> filtered = new ArrayList<>();
             for (LeveledEnchant le : this.enchants) {
-                if (le.enchant().value().isAcceptableItem(gear.stack)) {
+                if (le.enchant().value().canEnchant(gear.stack)) {
                     filtered.add(le);
                 }
             }
@@ -142,19 +140,19 @@ public final class SelectedItemManager {
 
     /** Check if an itemstack is a gear */
     public static boolean isGear(ItemStack stack) {
-        return !isBook(stack) && (stack.isEnchantable() || stack.getEnchantments().getSize() > 0);
+        return !isBook(stack) && (stack.isEnchantable() || stack.getEnchantments().size() > 0);
     }
 
     
     /** Check if an itemstack is an enchanted book */
     public static boolean isBook(ItemStack stack) {
-        return stack.isOf(Items.ENCHANTED_BOOK);
+        return stack.is(Items.ENCHANTED_BOOK);
     }
 
 
     private AddResult tryCombine(Map<LeveledEnchant, Set<Integer>> responsibilityEnchantMap, Collection<LeveledEnchant> enchants, int itemId) {
 
-        System.out.println("Now tryna add: " + enchants);
+       //  System.out.println("Now tryna add: " + enchants);
 
         boolean usefulEnchantPresent = false;
 
@@ -170,7 +168,7 @@ public final class SelectedItemManager {
 
                 if (enchant.enchant.equals(alreadyAddedEnchant.enchant)) {
 
-                    System.out.println(enchant + " does EQUAL to " + alreadyAddedEnchant);
+                    // System.out.println(enchant + " does EQUAL to " + alreadyAddedEnchant);
 
                     enchantIsNew = false;
                     
@@ -184,12 +182,12 @@ public final class SelectedItemManager {
 
                         // Allow adding a second of the same enchant at same lvl
                         if  (responsibilityEnchantMap.get(alreadyAddedEnchant).size() == 1) enchantIsNew = true;
-                        else return AddResult.fail(Text.translatable("easyenchant.fail.cannot_handle_more_than_two_of_same_enchant", enchant));
+                        else return AddResult.fail(Component.translatable("easyenchant.fail.cannot_handle_more_than_two_of_same_enchant", enchant));
 
                     } else responsibilityEnchantMap.get(enchant).add(itemId); // not a new enchant, but we should note that this book does also apply this max enchant
 
                     break;
-                } else System.out.println(enchant + " does NOTTT equal to " + alreadyAddedEnchant);
+                } // else System.out.println(enchant + " does NOTTT equal to " + alreadyAddedEnchant);
             }
 
             if (enchantIsNew) {
@@ -201,7 +199,7 @@ public final class SelectedItemManager {
         }
 
 
-        if (!usefulEnchantPresent) return AddResult.fail(Text.translatable("easyenchant.fail.no_useful_enchants", books.get(itemId).enchants));
+        if (!usefulEnchantPresent) return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", books.get(itemId).enchants));
         
         return AddResult.pass();
     }
@@ -227,7 +225,7 @@ public final class SelectedItemManager {
                 }
             }
             if (!useful) {
-                return AddResult.fail(Text.translatable("easyenchant.fail.no_useful_enchants", book.enchants));
+                return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", book.enchants));
             }
         }
 
@@ -241,7 +239,7 @@ public final class SelectedItemManager {
         
         for (EnchantedBook book : books.values()) {
             EnchantedBook culledBook = book.culledForGear(gear);
-            if (culledBook.enchants.size() == 0) return AddResult.fail(Text.translatable("easyenchant.fail.no_valid_enchants_for_gear", books.get(culledBook.id).enchants, gear.stack.getName()));
+            if (culledBook.enchants.size() == 0) return AddResult.fail(Component.translatable("easyenchant.fail.no_valid_enchants_for_gear", books.get(culledBook.id).enchants, gear.stack.getHoverName()));
             culledBooks.put(culledBook.id, culledBook);
         }
         
@@ -269,7 +267,7 @@ public final class SelectedItemManager {
                 }
             }
             if (!useful) {
-                return AddResult.fail(Text.translatable("easyenchant.fail.no_useful_enchants", books.get(culledBook.id).enchants));
+                return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", books.get(culledBook.id).enchants));
             }
         }
         
@@ -277,8 +275,8 @@ public final class SelectedItemManager {
         // Check if any planned enchants has conflicts, if so then yk bad
         for (LeveledEnchant toAddEnchant : responsibilityEnchantMap.keySet()) {
             for (LeveledEnchant gearEnchant : gear.enchants) {
-                if (!Enchantment.canBeCombined(toAddEnchant.enchant, gearEnchant.enchant) && !toAddEnchant.enchant.equals(gearEnchant.enchant)) {
-                    return AddResult.fail(Text.translatable("easyenchant.fail.cannot_combine_enchants", toAddEnchant, gearEnchant, gear.stack.getName()));
+                if (!Enchantment.areCompatible(toAddEnchant.enchant, gearEnchant.enchant) && !toAddEnchant.enchant.equals(gearEnchant.enchant)) {
+                    return AddResult.fail(Component.translatable("easyenchant.fail.cannot_combine_enchants", toAddEnchant, gearEnchant, gear.stack.getHoverName()));
                 }
             }
         }
@@ -307,7 +305,7 @@ public final class SelectedItemManager {
     public boolean hasGear() { return gear != null; }
 
     public AddResult tryAddGear(int id, ItemStack stack) {
-        if (hasGear()) return AddResult.fail(Text.translatable("easyenchant.fail.gear_already_set"));
+        if (hasGear()) return AddResult.fail(Component.translatable("easyenchant.fail.gear_already_set"));
 
         gear = new Gear(id, stack);
 
@@ -353,21 +351,21 @@ public final class SelectedItemManager {
         return hasGear() && hasBooks();
     }
 
-    public void checkContradictions(AnvilScreenHandler handler) {
+    public void checkContradictions(AnvilMenu handler) {
 
         ArrayList<Integer> toRemove = new ArrayList<>();
 
         for (int bookId : books.keySet()) {
-            ItemStack newStack = handler.getSlot(bookId).getStack();
-            if (newStack.isEmpty() || !ItemStack.areItemsAndComponentsEqual(newStack, books.get(bookId).stack)) toRemove.add(bookId);
+            ItemStack newStack = handler.getSlot(bookId).getItem();
+            if (newStack.isEmpty() || !ItemStack.isSameItemSameComponents(newStack, books.get(bookId).stack)) toRemove.add(bookId);
         }
 
         for (int bookId : toRemove) removeBook(bookId);
 
 
         if (gear != null) {
-            ItemStack newStack = handler.getSlot(gear.id).getStack();
-            if (newStack.isEmpty() || !ItemStack.areItemsAndComponentsEqual(newStack, gear.stack)) removeGear();
+            ItemStack newStack = handler.getSlot(gear.id).getItem();
+            if (newStack.isEmpty() || !ItemStack.isSameItemSameComponents(newStack, gear.stack)) removeGear();
         }
         
     }
@@ -379,7 +377,7 @@ public final class SelectedItemManager {
         if (isBook(stack)) return tryAddBook(id, stack);
         else if (isGear(stack)) return tryAddGear(id, stack);
 
-        return AddResult.fail(Text.translatable("easyenchant.fail.item_not_valid"));
+        return AddResult.fail(Component.translatable("easyenchant.fail.item_not_valid"));
     }
 
     public void removeItem(int id) {

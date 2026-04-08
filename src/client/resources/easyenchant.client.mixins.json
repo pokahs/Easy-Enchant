@@ -1,12 +1,15 @@
 {
 	"required": true,
 	"package": "io.github.pokahs.easyenchant.mixin.client",
-	"compatibilityLevel": "JAVA_21",
+	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"AnvilScreenMixin",
 		"HandledScreenInvoker"
 	],
 	"injectors": {
 		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
 	}
 }
