@@ -7,10 +7,6 @@
 
 This is a client side utility mod that allows you to easily and efficiently combine your enchanted books with gear at anvils!
 
-
-
-🛠️ **Important!! Easy Enchant is in beta and rlyy not that tested. You might experience issues/crashes. If so, plz make an issue ticket kthx byee** 🛠️
-
 ## Usage
 
 You can easily select your desired items to enchant in the anvil gui by hovering over and pressing your select item key.
@@ -34,6 +30,7 @@ Finally, you can toggle the current **optimizing mode**. The two options are **L
 - If you already have enough levels and want to just use the **Enchant fully** button, then you should optimize for **Levels**.
 - If you are planning to obtain XP/levels, do one **Enchant step**, repeat, etc... then you should optimize for **XP**.
 
+Realistically though, the difference in levels/xp b/w these modes is usually negligible; you probably don't need to worry about selecting the right one.
 <br/>
 
 ## Advanced Usage
@@ -57,10 +54,10 @@ You can change the **optimizing mode** here as well, along with some other new o
 Apart from the mod being early in dev and kinda likely to crash, there are limitations:
 
 - Combining lower level enchants together to make a higher level enchant is not supported well. Easy Enchant currently only supports this idea up to two books;
-if you try to select four Looting I books + sword to make one Looting III sword, Easy Enchant will only allow you to select two Looting I books to make Looting II.
+if you try to select more than two Looting I books + sword to make one Looting III sword, Easy Enchant will simply count these additional Looting I books as "useless", since it won't actually try to combine them all into one Looting III enchantment.
 I do want to tackle this issue, but it's niche enough imo that I cba yet.
 
-- Instant Enchant does nottttt like when anvil breaks, all items basically get deselected cuz auto enchanter just sends all packets and doesnt track at all if anvil breaks in between
+- Because Instant Enchant simply send all packets in one tick and hopes for the best, it can't know or account for if the anvil breaks in the middle of enchanting. Therefore, all items basically get deselected since Instant Enchant has already "finished".
 
 ### Credits
 

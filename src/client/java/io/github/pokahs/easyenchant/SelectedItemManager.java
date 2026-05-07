@@ -68,6 +68,10 @@ public final class SelectedItemManager {
             this.enchants = enchants;
         }
 
+        public String toString() {
+            return (isGear ? stack.getHoverName().getString() + " " : "Book ") + enchants.toString();
+        }
+
         // prob should del
         @Override
         public int hashCode() {
@@ -98,6 +102,11 @@ public final class SelectedItemManager {
         public Gear(int id, ItemStack stack, int repairCost, ArrayList<LeveledEnchant> enchants) {
             super(true, id, stack, repairCost, enchants);
         }
+
+        public boolean enchantAppliesToGear(LeveledEnchant enchant) {
+            return enchant.enchant().value().canEnchant(stack);
+        }
+
     }
 
 
@@ -120,15 +129,6 @@ public final class SelectedItemManager {
             super(false, id, stack, repairCost, enchants);
         }
 
-        public EnchantedBook culledForGear(Gear gear) {
-            ArrayList<LeveledEnchant> filtered = new ArrayList<>();
-            for (LeveledEnchant le : this.enchants) {
-                if (le.enchant().value().canEnchant(gear.stack)) {
-                    filtered.add(le);
-                }
-            }
-            return new EnchantedBook(this.id, this.stack, this.repairCost, filtered);
-        }
     }
 
 
@@ -149,141 +149,104 @@ public final class SelectedItemManager {
         return stack.is(Items.ENCHANTED_BOOK);
     }
 
+    private AddResult tryCombineItemsOneDirection(List<EnchantableItem> newItems) {
 
-    private AddResult tryCombine(Map<LeveledEnchant, Set<Integer>> responsibilityEnchantMap, Collection<LeveledEnchant> enchants, int itemId) {
+        Map<LeveledEnchant, Set<Integer>> responsibilityEnchantMap = new HashMap<>();
 
-       //  System.out.println("Now tryna add: " + enchants);
+        Optional<Gear> gearItem = newItems.stream().filter(i -> i.isGear).findFirst().map(i -> (Gear) i);
 
-        boolean usefulEnchantPresent = false;
+        for (EnchantableItem newItem : newItems) {
+        
+            boolean usefulEnchantPresent = false;
+            Optional<LeveledEnchant> conflictingEnchant = Optional.empty();
 
-        for (EnchantableItem.LeveledEnchant enchant : enchants) {
-            
-            boolean enchantIsNew = true;
+            for (EnchantableItem.LeveledEnchant newEnchant : newItem.enchants) {
 
+                if (gearItem.isPresent() && !gearItem.get().enchantAppliesToGear(newEnchant)) {
+                    continue; // if enchant doesn't apply to gear, just ignore it in the combining logic. This allows for books with some enchants that dont apply to the gear, as long as they have at least one that does apply.
+                }
+                
+                boolean newEnchantIsAccNew = true;
 
-            Iterator<LeveledEnchant> iterator = responsibilityEnchantMap.keySet().iterator();
-            while (iterator.hasNext()) {
+                Iterator<LeveledEnchant> alreadyAddedEnchantsIterator = responsibilityEnchantMap.keySet().iterator();
+                while (alreadyAddedEnchantsIterator.hasNext()) {
 
-                LeveledEnchant alreadyAddedEnchant = iterator.next();
+                    LeveledEnchant alreadyAddedEnchant = alreadyAddedEnchantsIterator.next();
 
-                if (enchant.enchant.equals(alreadyAddedEnchant.enchant)) {
+                    if (newEnchant.enchant.equals(alreadyAddedEnchant.enchant)) {
 
-                    // System.out.println(enchant + " does EQUAL to " + alreadyAddedEnchant);
+                        newEnchantIsAccNew = false;
+                        
+                        if (newEnchant.level != alreadyAddedEnchant.level) {
+                            if (newEnchant.level > alreadyAddedEnchant.level) { // new enchant improves existing enchant
+                                alreadyAddedEnchantsIterator.remove();
+                                
+                                newEnchantIsAccNew = true;
+                            }
+                        } else if (newEnchant.level != newEnchant.enchant.value().getMaxLevel() && responsibilityEnchantMap.get(alreadyAddedEnchant).size() == 1) {
 
-                    enchantIsNew = false;
-                    
-                    if (enchant.level != alreadyAddedEnchant.level) {
-                        if (enchant.level > alreadyAddedEnchant.level) { // new enchant improves existing enchant
-                            iterator.remove();
-                            enchantIsNew = true;
-                        }
+                            newEnchantIsAccNew = true; // new enchant is same level as existing enchant, but they can be combined to get a higher level enchant.
+
+                        } else responsibilityEnchantMap.get(newEnchant).add(newItem.id); // not a new enchant, but we should note that this book does also apply this max enchant
+
+                        break;
+                    } else if (!Enchantment.areCompatible(newEnchant.enchant, alreadyAddedEnchant.enchant)) {
+                        newEnchantIsAccNew = false;
+                        conflictingEnchant = Optional.of(alreadyAddedEnchant);
                     }
-                    else if (enchant.level != enchant.enchant.value().getMaxLevel()) {
+                }
 
-                        // Allow adding a second of the same enchant at same lvl
-                        if  (responsibilityEnchantMap.get(alreadyAddedEnchant).size() == 1) enchantIsNew = true;
-                        else return AddResult.fail(Component.translatable("easyenchant.fail.cannot_handle_more_than_two_of_same_enchant", enchant));
-
-                    } else responsibilityEnchantMap.get(enchant).add(itemId); // not a new enchant, but we should note that this book does also apply this max enchant
-
-                    break;
-                } // else System.out.println(enchant + " does NOTTT equal to " + alreadyAddedEnchant);
+                if (newEnchantIsAccNew) {
+                    responsibilityEnchantMap.putIfAbsent(newEnchant, new HashSet<Integer>());
+                    responsibilityEnchantMap.get(newEnchant).add(newItem.id);
+                }
+                
+                usefulEnchantPresent = usefulEnchantPresent || newEnchantIsAccNew;
             }
 
-            if (enchantIsNew) {
-                responsibilityEnchantMap.putIfAbsent(enchant, new HashSet<Integer>());
-                responsibilityEnchantMap.get(enchant).add(itemId);
+            if (newItem.enchants.isEmpty()) continue; // allow adding items with no enchants, just ignore them in the combining logic. This allows for gear with no enchants.
+
+            if (!usefulEnchantPresent) {
+                if (conflictingEnchant.isPresent()) return AddResult.fail(Component.translatable("easyenchant.fail.conflicting_enchants", newItem, conflictingEnchant.get()));
+                else return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", newItem));
             }
-            
-            usefulEnchantPresent = usefulEnchantPresent || enchantIsNew;
+
         }
-
-
-        if (!usefulEnchantPresent) return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", books.get(itemId).enchants));
         
         return AddResult.pass();
     }
 
     
     public AddResult tryCombineBooks() {
-        
-        Map<LeveledEnchant, Set<Integer>> responsibilityEnchantMap = new HashMap<>();
 
-        for (EnchantedBook book : books.values()) {
-            AddResult result = tryCombine(responsibilityEnchantMap, book.enchants, book.id);
-            if (!result.successful) return result;
-        }
+        List<EnchantableItem> bookList = List.copyOf(books.values());
 
-        // Some books might be useless if ltr books added had better lvled enchants, check for this
-        for (EnchantedBook book : books.values()) {
-            boolean useful = false;
-            for (LeveledEnchant e : book.enchants) {
-                Set<Integer> responsibleItemIds = responsibilityEnchantMap.get(e);
-                if (responsibleItemIds != null && responsibleItemIds.contains(book.id) && (responsibleItemIds.size() == 1 || e.enchant.value().getMaxLevel() > e.level)) {
-                    useful = true;
-                    break;
-                }
-            }
-            if (!useful) {
-                return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", book.enchants));
-            }
-        }
+        AddResult result = tryCombineItemsOneDirection(bookList);
+        if (!result.successful) return result;
 
-        return AddResult.pass(); // no gear, no need to check if enchants are valid for gear
+        return tryCombineItemsOneDirection(bookList.reversed());
     }
 
 
     public AddResult tryCombineGearWithBooks() {
 
-        Map<Integer, EnchantedBook> culledBooks = new HashMap<>();
+        List<EnchantableItem> items = new ArrayList<>();
+
+        items.add(gear);
+        items.addAll(books.values());
+
+        AddResult result = tryCombineItemsOneDirection(items);
+        if (!result.successful) return result;
+
+        items.clear();
+        items.addAll(books.values());
+        items = items.reversed();
+        items.addFirst(gear);
+
+        return tryCombineItemsOneDirection(items);
         
-        for (EnchantedBook book : books.values()) {
-            EnchantedBook culledBook = book.culledForGear(gear);
-            if (culledBook.enchants.size() == 0) return AddResult.fail(Component.translatable("easyenchant.fail.no_valid_enchants_for_gear", books.get(culledBook.id).enchants, gear.stack.getHoverName()));
-            culledBooks.put(culledBook.id, culledBook);
-        }
-        
-        Map<LeveledEnchant, Set<Integer>> responsibilityEnchantMap = new HashMap<>();
-
-        for (LeveledEnchant enchant : gear.enchants) {
-            responsibilityEnchantMap.putIfAbsent(enchant, new HashSet<Integer>());
-            responsibilityEnchantMap.get(enchant).add(gear.id);
-        }
-
-
-        for (EnchantedBook culledBook : culledBooks.values()) {
-            AddResult result = tryCombine(responsibilityEnchantMap, culledBook.enchants, culledBook.id);
-            if (!result.successful) return result;
-        }
-
-        // Some books might be useless if ltr books added had better lvled enchants, check for this
-        for (EnchantedBook culledBook : culledBooks.values()) {
-            boolean useful = false;
-            for (LeveledEnchant e : culledBook.enchants) {
-                Set<Integer> responsibleItemIds = responsibilityEnchantMap.get(e);
-                if (responsibleItemIds != null && responsibleItemIds.contains(culledBook.id) && (responsibleItemIds.size() == 1 || e.enchant.value().getMaxLevel() > e.level)) { // See if book is only item responsible for useful enchant
-                    useful = true;
-                    break;
-                }
-            }
-            if (!useful) {
-                return AddResult.fail(Component.translatable("easyenchant.fail.no_useful_enchants", books.get(culledBook.id).enchants));
-            }
-        }
-        
-
-        // Check if any planned enchants has conflicts, if so then yk bad
-        for (LeveledEnchant toAddEnchant : responsibilityEnchantMap.keySet()) {
-            for (LeveledEnchant gearEnchant : gear.enchants) {
-                if (!Enchantment.areCompatible(toAddEnchant.enchant, gearEnchant.enchant) && !toAddEnchant.enchant.equals(gearEnchant.enchant)) {
-                    return AddResult.fail(Component.translatable("easyenchant.fail.cannot_combine_enchants", toAddEnchant, gearEnchant, gear.stack.getHoverName()));
-                }
-            }
-        }
-        return AddResult.pass();
-
     }
-    
+
 
     public List<Integer> getBookIds() {
         return new ArrayList<>(books.keySet());

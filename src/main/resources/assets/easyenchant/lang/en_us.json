@@ -1,18 +1,18 @@
 {
     
-  "key.easyenchant.select_item" : "Select item",
-  "key.category.easyenchant.ldm" : "Easy Enchant",
+  "key.easyenchant.select_item": "Select item",
+  "key.category.easyenchant.ldm": "Easy Enchant",
 
   "easyenchant.status.enchanting_complete": "Enchanting complete!",
   "easyenchant.status.step_complete": "Enchanting step complete!",
   "easyenchant.status.select_by_pressing": "Press %1$s to select items!",
-  "easyenchant.status.running_optimizer" : "Running enchanting optimizer…",
-  "easyenchant.status.item_obstruction" : "Item obstruction! Make sure anvil and original item slots are empty.",
-  "easyenchant.status.timeout" : "Enchantment timed out! Try again.",
+  "easyenchant.status.running_optimizer": "Running enchanting optimizer…",
+  "easyenchant.status.item_obstruction": "Item obstruction! Make sure anvil and original item slots are empty.",
+  "easyenchant.status.timeout": "Enchantment timed out! Try again.",
   
-  "easyenchant.button.levels" : "Levels",
-  "easyenchant.button.xp" : "XP",
-  "easyenchant.button.config" : "Config",
+  "easyenchant.button.levels": "Levels",
+  "easyenchant.button.xp": "XP",
+  "easyenchant.button.config": "Config",
   "easyenchant.button.enchant_fully": "Enchant fully",
   "easyenchant.button.enchant_step": "Enchant step",
   "easyenchant.button.select_items": "Select items to enchant",
@@ -23,12 +23,9 @@
   "easyenchant.button.enchant_for_levels_and_xp_range": "Enchant for %1$s levels (%2$s-%3$s XP)",
   
   "easyenchant.fail.gear_already_set": "Gear is already set",
-  "easyenchant.fail.item_not_valid" : "Item is not a valid gear or book",
-  "easyenchant.fail.cannot_combine_enchants" : "%1$s and %2$s cannot both be on %3$s",
-  "easyenchant.fail.no_valid_enchants_for_gear" : "Book %1$s has no valid enchants for %2$s",
-  "easyenchant.fail.no_useful_enchants": "Book %1$s has no applicable / unique enchants",
-  "easyenchant.fail.cannot_handle_more_than_two_of_same_enchant" : "Easy Enchant does not support combining more than two of an enchant type (%1$s) to get a higher leveled enchant",
-
+  "easyenchant.fail.item_not_valid": "Item is not a valid gear or book",
+  "easyenchant.fail.conflicting_enchants": "%1$s conflicts with enchant %2$s",
+  "easyenchant.fail.no_useful_enchants": "%1$s has no applicable / unique enchants",
   
   "text.autoconfig.easyenchant.title": "Easy Enchant Config",
 
