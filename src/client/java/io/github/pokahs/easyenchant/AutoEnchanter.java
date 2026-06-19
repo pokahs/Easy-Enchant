@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.inventory.AnvilMenu;
-import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.item.ItemStack;
 import io.github.pokahs.easyenchant.EnchantOptimizer.Instruction;
 import net.minecraft.world.inventory.ContainerInput;

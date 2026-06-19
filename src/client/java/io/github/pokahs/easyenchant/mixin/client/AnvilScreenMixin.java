@@ -7,9 +7,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.mojang.authlib.minecraft.client.MinecraftClient;
-import com.terraformersmc.modmenu.ModMenu;
-
 import io.github.pokahs.easyenchant.AutoEnchanter;
 import io.github.pokahs.easyenchant.EasyEnchantAnvil;
 import io.github.pokahs.easyenchant.EasyEnchantClient;
@@ -24,7 +21,6 @@ import io.github.pokahs.easyenchant.StatusManager;
 import io.github.pokahs.easyenchant.StatusManager.TextColor;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.AutoConfigClient;
-import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -98,7 +94,6 @@ public abstract class AnvilScreenMixin extends ItemCombinerScreen<AnvilMenu> imp
             .bounds(leftPos + BUTTON_WIDTH, topPos + imageHeight, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
 
-        // CycleButton.builder(null, null).
         
         modeButton = addRenderableWidget(
             CycleButton.builder((Mode mode) ->
@@ -117,11 +112,7 @@ public abstract class AnvilScreenMixin extends ItemCombinerScreen<AnvilMenu> imp
         
 
         addRenderableWidget(Button.builder(Component.translatable("easyenchant.button.config"), b -> {
-            // Minecraft.getInstance().setScreen(AutoConfig.getConfigHolder(ModConfig.class).getConfig());
-            // Minecraft.getInstance().setScreen(ConfigBuilder.create().setParentScreen(Minecraft.getInstance().screen).build());
-            // Minecraft.getInstance().setScreen(ModMenu.getConfigScreen(AutoConfig.getConfigHolder(ModConfig.class).getConfig()).apply(Minecraft.getInstance().screen));
-            Minecraft.getInstance().setScreen(AutoConfigClient.getConfigScreen(ModConfig.class, Minecraft.getInstance().screen).get());
-
+            Minecraft.getInstance().gui.setScreen(AutoConfigClient.getConfigScreen(ModConfig.class, Minecraft.getInstance().gui.screen()).get());
         })
             .bounds(leftPos + BUTTON_WIDTH, topPos + imageHeight + BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT)
             .build());
@@ -130,7 +121,6 @@ public abstract class AnvilScreenMixin extends ItemCombinerScreen<AnvilMenu> imp
         
         handleItemSelectionChange(); // Handles if differences in saved manager vs current inventory
 
-        // statusManager.updateStatusTo("Screen loaded!", TextColor.SUCCESS);
 
         // Intro message if manager empty, guides user how to start
         if (!selectedItemManager.hasGear() && !selectedItemManager.hasBooks()) statusManager.updateStatusTo(Component.translatable("easyenchant.status.select_by_pressing", EasyEnchantClient.SELECT_ITEM_KEY.getTranslatedKeyMessage()).getString(), TextColor.DEFAULT, 5000);
